@@ -1,0 +1,440 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated student profile stored under their own Firebase UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user"]
+        },
+        "profileCompleted": {
+          "type": "boolean"
+        },
+        "personal": {
+          "type": "object"
+        },
+        "eligibility": {
+          "type": "object"
+        },
+        "education": {
+          "type": "object"
+        },
+        "searchPreferences": {
+          "type": "array"
+        },
+        "reminderPreferences": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "profileCompleted", "personal", "eligibility", "education", "createdAt", "updatedAt"]
+    },
+    "ExamResult": {
+      "title": "ExamResult",
+      "description": "Student examination attempt record under users/{uid}/examResults/{examResultId}.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "examName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "examCategory": {
+          "type": "string",
+          "enum": ["National", "State", "Board", "International / Language", "Custom"]
+        },
+        "attemptLabel": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "year": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "testDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "fields": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "examName", "examCategory", "attemptLabel", "fields", "createdAt", "updatedAt"]
+    },
+    "SavedScholarship": {
+      "title": "SavedScholarship",
+      "description": "Scholarship bookmarked by an authenticated student.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "scholarshipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "scholarshipName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "country": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "deadline": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "reminderDays": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "scholarshipId", "scholarshipName", "provider", "country", "deadline", "reminderDays", "createdAt", "updatedAt"]
+    },
+    "ApplicationRecord": {
+      "title": "ApplicationRecord",
+      "description": "Student scholarship application tracking record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "scholarshipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "scholarshipName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "deadline": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "applicationDate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Saved", "Planning", "In Progress", "Submitted", "Under Review", "Accepted", "Rejected", "Withdrawn"]
+        },
+        "referenceNumber": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "scholarshipId", "scholarshipName", "provider", "deadline", "status", "createdAt", "updatedAt"]
+    },
+    "Scholarship": {
+      "title": "Scholarship",
+      "description": "Verified scholarship entry managed by authorized administrators.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 240
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "state": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "university": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["India", "International"]
+        },
+        "providerType": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "studyLevels": {
+          "type": "array"
+        },
+        "degrees": {
+          "type": "array"
+        },
+        "fields": {
+          "type": "array"
+        },
+        "fundingType": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "fundingDetails": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "duration": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "deadline": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "deadlineStatus": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "eligibility": {
+          "type": "object"
+        },
+        "examRequirement": {
+          "type": "object"
+        },
+        "requiredDocuments": {
+          "type": "array"
+        },
+        "applicationProcedure": {
+          "type": "array"
+        },
+        "officialWebsite": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "officialPortal": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "officialSource": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "sourceUrl": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["Verified", "Needs Review", "Requirement Not Verified"]
+        },
+        "lastVerifiedDate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "provider", "country", "scope", "studyLevels", "degrees", "fields", "fundingType", "deadline", "eligibility", "examRequirement", "requiredDocuments", "applicationProcedure", "officialWebsite", "officialPortal", "officialSource", "verificationStatus", "lastVerifiedDate", "createdAt", "updatedAt"]
+    },
+    "ExamInfo": {
+      "title": "ExamInfo",
+      "description": "Exam directory entry managed by authorized administrators.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "shortName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "countryOrRegion": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "purpose": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "whoTakesIt": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "relatedPrograms": {
+          "type": "array"
+        },
+        "officialWebsite": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "requirementsNote": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["Verified", "Needs Review", "Requirement Not Verified"]
+        },
+        "lastVerifiedDate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "shortName", "category", "countryOrRegion", "purpose", "whoTakesIt", "relatedPrograms", "officialWebsite", "requirementsNote", "verificationStatus", "lastVerifiedDate", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator marker document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254
+        }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Student profile document keyed by Firebase Auth UID."
+    },
+    "/users/{uid}/examResults/{examResultId}": {
+      "schema": { "$ref": "#/entities/ExamResult" },
+      "description": "Dynamic exam records owned by the user."
+    },
+    "/users/{uid}/savedScholarships/{scholarshipId}": {
+      "schema": { "$ref": "#/entities/SavedScholarship" },
+      "description": "Saved scholarships and reminder preferences owned by the user."
+    },
+    "/users/{uid}/applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/ApplicationRecord" },
+      "description": "Tracked scholarship applications owned by the user."
+    },
+    "/scholarships/{scholarshipId}": {
+      "schema": { "$ref": "#/entities/Scholarship" },
+      "description": "Publicly readable verified scholarship directory managed by admins."
+    },
+    "/exams/{examId}": {
+      "schema": { "$ref": "#/entities/ExamInfo" },
+      "description": "Publicly readable exam directory managed by admins."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted admin allowlist (no client writes)."
+    }
+  }
+}

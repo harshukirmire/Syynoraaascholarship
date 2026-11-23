@@ -1,0 +1,6 @@
+{
+  "name": "SYNORA",
+  "description": "Centralized scholarship discovery, eligibility guidance, examination directory, application tracking, and AI assistance platform for students in India and worldwide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,288 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == 'harshukirmire@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidVerificationStatus(status) {
+      return status in ['Verified', 'Needs Review', 'Requirement Not Verified'];
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserProfile(data, uid) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'profileCompleted', 'personal', 'eligibility', 'education', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'profileCompleted', 'personal', 'eligibility', 'education', 'searchPreferences', 'reminderPreferences', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == uid && isValidId(data.uid) &&
+        data.email is string && data.email.size() <= 254 &&
+        data.role is string && data.role == 'user' &&
+        data.profileCompleted is bool &&
+        data.personal is map &&
+        data.eligibility is map &&
+        data.education is map &&
+        (!('searchPreferences' in data) || (data.searchPreferences is list && data.searchPreferences.size() <= 15 && (data.searchPreferences.size() == 0 || data.searchPreferences[0] is string))) &&
+        (!('reminderPreferences' in data) || data.reminderPreferences is map) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidExamResult(data, uid) {
+      return data.keys().hasAll(['uid', 'examName', 'examCategory', 'attemptLabel', 'fields', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'examName', 'examCategory', 'attemptLabel', 'year', 'testDate', 'fields', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == uid && isValidId(data.uid) &&
+        data.examName is string && data.examName.size() >= 1 && data.examName.size() <= 120 &&
+        data.examCategory in ['National', 'State', 'Board', 'International / Language', 'Custom'] &&
+        data.attemptLabel is string && data.attemptLabel.size() <= 80 &&
+        (!('year' in data) || (data.year is string && data.year.size() <= 20)) &&
+        (!('testDate' in data) || (data.testDate is string && data.testDate.size() <= 30)) &&
+        data.fields is map &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSavedScholarship(data, uid, scholarshipId) {
+      return data.keys().hasAll(['uid', 'scholarshipId', 'scholarshipName', 'provider', 'country', 'deadline', 'reminderDays', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'scholarshipId', 'scholarshipName', 'provider', 'country', 'deadline', 'reminderDays', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == uid && isValidId(data.uid) &&
+        data.scholarshipId is string && data.scholarshipId == scholarshipId && isValidId(data.scholarshipId) &&
+        data.scholarshipName is string && data.scholarshipName.size() >= 1 && data.scholarshipName.size() <= 240 &&
+        data.provider is string && data.provider.size() <= 200 &&
+        data.country is string && data.country.size() <= 100 &&
+        data.deadline is string && data.deadline.size() <= 100 &&
+        data.reminderDays is list && data.reminderDays.size() <= 5 &&
+        (data.reminderDays.size() == 0 || data.reminderDays[0] is int) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidApplicationRecord(data, uid) {
+      return data.keys().hasAll(['uid', 'scholarshipId', 'scholarshipName', 'provider', 'deadline', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'scholarshipId', 'scholarshipName', 'provider', 'deadline', 'applicationDate', 'status', 'referenceNumber', 'notes', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == uid && isValidId(data.uid) &&
+        data.scholarshipId is string && data.scholarshipId.size() >= 1 && data.scholarshipId.size() <= 128 && isValidId(data.scholarshipId) &&
+        data.scholarshipName is string && data.scholarshipName.size() >= 1 && data.scholarshipName.size() <= 240 &&
+        data.provider is string && data.provider.size() <= 200 &&
+        data.deadline is string && data.deadline.size() <= 100 &&
+        (!('applicationDate' in data) || (data.applicationDate is string && data.applicationDate.size() <= 40)) &&
+        data.status in ['Saved', 'Planning', 'In Progress', 'Submitted', 'Under Review', 'Accepted', 'Rejected', 'Withdrawn'] &&
+        (!('referenceNumber' in data) || (data.referenceNumber is string && data.referenceNumber.size() <= 120)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidScholarship(data, scholarshipId) {
+      return data.keys().hasAll(['id', 'name', 'provider', 'country', 'scope', 'studyLevels', 'degrees', 'fields', 'fundingType', 'deadline', 'eligibility', 'examRequirement', 'requiredDocuments', 'applicationProcedure', 'officialWebsite', 'officialPortal', 'officialSource', 'verificationStatus', 'lastVerifiedDate', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'provider', 'country', 'state', 'university', 'scope', 'providerType', 'studyLevels', 'degrees', 'fields', 'fundingType', 'fundingDetails', 'duration', 'deadline', 'deadlineStatus', 'eligibility', 'examRequirement', 'requiredDocuments', 'applicationProcedure', 'officialWebsite', 'officialPortal', 'officialSource', 'sourceUrl', 'verificationStatus', 'lastVerifiedDate', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id == scholarshipId && isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 240 &&
+        data.provider is string && data.provider.size() >= 2 && data.provider.size() <= 200 &&
+        data.country is string && data.country.size() >= 2 && data.country.size() <= 100 &&
+        (!('state' in data) || (data.state is string && data.state.size() <= 100)) &&
+        (!('university' in data) || (data.university is string && data.university.size() <= 200)) &&
+        data.scope in ['India', 'International'] &&
+        (!('providerType' in data) || (data.providerType is string && data.providerType.size() <= 80)) &&
+        data.studyLevels is list && data.studyLevels.size() <= 12 && (data.studyLevels.size() == 0 || data.studyLevels[0] is string) &&
+        data.degrees is list && data.degrees.size() <= 20 && (data.degrees.size() == 0 || data.degrees[0] is string) &&
+        data.fields is list && data.fields.size() <= 20 && (data.fields.size() == 0 || data.fields[0] is string) &&
+        data.fundingType is string && data.fundingType.size() <= 80 &&
+        (!('fundingDetails' in data) || (data.fundingDetails is string && data.fundingDetails.size() <= 600)) &&
+        (!('duration' in data) || (data.duration is string && data.duration.size() <= 160)) &&
+        data.deadline is string && data.deadline.size() <= 120 &&
+        (!('deadlineStatus' in data) || (data.deadlineStatus is string && data.deadlineStatus.size() <= 60)) &&
+        data.eligibility is map &&
+        data.examRequirement is map &&
+        data.requiredDocuments is list && data.requiredDocuments.size() <= 30 && (data.requiredDocuments.size() == 0 || data.requiredDocuments[0] is string) &&
+        data.applicationProcedure is list && data.applicationProcedure.size() <= 25 && (data.applicationProcedure.size() == 0 || data.applicationProcedure[0] is string) &&
+        data.officialWebsite is string && data.officialWebsite.size() <= 500 &&
+        data.officialPortal is string && data.officialPortal.size() <= 500 &&
+        data.officialSource is string && data.officialSource.size() <= 240 &&
+        (!('sourceUrl' in data) || (data.sourceUrl is string && data.sourceUrl.size() <= 500)) &&
+        isValidVerificationStatus(data.verificationStatus) &&
+        data.lastVerifiedDate is string && data.lastVerifiedDate.size() <= 40 &&
+        (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 128)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidExamInfo(data, examId) {
+      return data.keys().hasAll(['id', 'name', 'shortName', 'category', 'countryOrRegion', 'purpose', 'whoTakesIt', 'relatedPrograms', 'officialWebsite', 'requirementsNote', 'verificationStatus', 'lastVerifiedDate', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'shortName', 'category', 'countryOrRegion', 'purpose', 'whoTakesIt', 'relatedPrograms', 'officialWebsite', 'requirementsNote', 'verificationStatus', 'lastVerifiedDate', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id == examId && isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.shortName is string && data.shortName.size() >= 1 && data.shortName.size() <= 40 &&
+        data.category is string && data.category.size() <= 80 &&
+        data.countryOrRegion is string && data.countryOrRegion.size() <= 120 &&
+        data.purpose is string && data.purpose.size() <= 500 &&
+        data.whoTakesIt is string && data.whoTakesIt.size() <= 400 &&
+        data.relatedPrograms is list && data.relatedPrograms.size() <= 25 && (data.relatedPrograms.size() == 0 || data.relatedPrograms[0] is string) &&
+        data.officialWebsite is string && data.officialWebsite.size() <= 500 &&
+        data.requirementsNote is string && data.requirementsNote.size() <= 600 &&
+        isValidVerificationStatus(data.verificationStatus) &&
+        data.lastVerifiedDate is string && data.lastVerifiedDate.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // Admins Registry (server/console managed only)
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
+    // User Profiles (strict PII isolation)
+    match /users/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(uid) && isOwner(uid) &&
+        isValidUserProfile(incoming(), uid) &&
+        incoming().role == 'user' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(uid) &&
+        isValidUserProfile(incoming(), uid) &&
+        incoming().uid == existing().uid &&
+        incoming().role == existing().role &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (isOwner(uid) && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'profileCompleted', 'personal', 'eligibility', 'education', 'searchPreferences', 'reminderPreferences', 'updatedAt']))
+        );
+      allow delete: if isValidId(uid) && isAdmin();
+
+      // Dynamic Exam Results
+      match /examResults/{examResultId} {
+        allow get: if isValidId(uid) && isValidId(examResultId) && (isOwner(uid) || isAdmin());
+        allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+        allow create: if isSignedIn() && isValidId(uid) && isValidId(examResultId) && isOwner(uid) &&
+          isValidExamResult(incoming(), uid) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if isSignedIn() && isValidId(uid) && isValidId(examResultId) &&
+          isValidExamResult(incoming(), uid) &&
+          incoming().uid == existing().uid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (isOwner(uid) && incoming().diff(existing()).affectedKeys().hasOnly(['examName', 'examCategory', 'attemptLabel', 'year', 'testDate', 'fields', 'updatedAt']))
+          );
+        allow delete: if isValidId(uid) && isValidId(examResultId) && (isOwner(uid) || isAdmin());
+      }
+
+      // Saved Scholarships & Reminders
+      match /savedScholarships/{scholarshipId} {
+        allow get: if isValidId(uid) && isValidId(scholarshipId) && (isOwner(uid) || isAdmin());
+        allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+        allow create: if isSignedIn() && isValidId(uid) && isValidId(scholarshipId) && isOwner(uid) &&
+          isValidSavedScholarship(incoming(), uid, scholarshipId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if isSignedIn() && isValidId(uid) && isValidId(scholarshipId) &&
+          isValidSavedScholarship(incoming(), uid, scholarshipId) &&
+          incoming().uid == existing().uid &&
+          incoming().scholarshipId == existing().scholarshipId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (isOwner(uid) && incoming().diff(existing()).affectedKeys().hasOnly(['scholarshipName', 'provider', 'country', 'deadline', 'reminderDays', 'updatedAt']))
+          );
+        allow delete: if isValidId(uid) && isValidId(scholarshipId) && (isOwner(uid) || isAdmin());
+      }
+
+      // Application Tracker
+      match /applications/{applicationId} {
+        allow get: if isValidId(uid) && isValidId(applicationId) && (isOwner(uid) || isAdmin());
+        allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+        allow create: if isSignedIn() && isValidId(uid) && isValidId(applicationId) && isOwner(uid) &&
+          isValidApplicationRecord(incoming(), uid) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if isSignedIn() && isValidId(uid) && isValidId(applicationId) &&
+          isValidApplicationRecord(incoming(), uid) &&
+          incoming().uid == existing().uid &&
+          incoming().scholarshipId == existing().scholarshipId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (isOwner(uid) && incoming().diff(existing()).affectedKeys().hasOnly(['scholarshipName', 'provider', 'deadline', 'applicationDate', 'status', 'referenceNumber', 'notes', 'updatedAt']))
+          );
+        allow delete: if isValidId(uid) && isValidId(applicationId) && (isOwner(uid) || isAdmin());
+      }
+    }
+
+    // Publicly Readable Scholarship Catalog (Admin Managed)
+    match /scholarships/{scholarshipId} {
+      allow get: if isValidId(scholarshipId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.scope in ['India', 'International'];
+      allow create: if isAdmin() && isValidId(scholarshipId) &&
+        isValidScholarship(incoming(), scholarshipId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(scholarshipId) &&
+        isValidScholarship(incoming(), scholarshipId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'provider', 'country', 'state', 'university', 'scope', 'providerType', 'studyLevels', 'degrees', 'fields', 'fundingType', 'fundingDetails', 'duration', 'deadline', 'deadlineStatus', 'eligibility', 'examRequirement', 'requiredDocuments', 'applicationProcedure', 'officialWebsite', 'officialPortal', 'officialSource', 'sourceUrl', 'verificationStatus', 'lastVerifiedDate', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(scholarshipId) && isAdmin();
+    }
+
+    // Publicly Readable Exam Directory (Admin Managed)
+    match /exams/{examId} {
+      allow get: if isValidId(examId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.verificationStatus in ['Verified', 'Needs Review', 'Requirement Not Verified'];
+      allow create: if isAdmin() && isValidId(examId) &&
+        isValidExamInfo(incoming(), examId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(examId) &&
+        isValidExamInfo(incoming(), examId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'shortName', 'category', 'countryOrRegion', 'purpose', 'whoTakesIt', 'relatedPrograms', 'officialWebsite', 'requirementsNote', 'verificationStatus', 'lastVerifiedDate', 'updatedAt']);
+      allow delete: if isValidId(examId) && isAdmin();
+    }
+  }
+}
